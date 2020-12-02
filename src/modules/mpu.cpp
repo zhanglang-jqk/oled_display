@@ -75,6 +75,7 @@ THE SOFTWARE.
 // AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
 // AD0 high = 0x69
 MPU6050 mpu;
+int16_t ax, ay, az, gx, gy, gz;
 //MPU6050 mpu(0x69); // <-- use for AD0 high
 
 /* =========================================================================
@@ -124,7 +125,7 @@ MPU6050 mpu;
 // components with gravity removed and adjusted for the world frame of
 // reference (yaw is relative to initial orientation, since no magnetometer
 // is present in this case). Could be quite handy in some cases.
-//#define OUTPUT_READABLE_WORLDACCEL
+// #define OUTPUT_READABLE_WORLDACCEL
 
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
@@ -262,7 +263,6 @@ void MPU_Init()
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
-
 u8 MPU_Process()
 {
     // if programming failed, don't try to do anything
@@ -314,14 +314,21 @@ u8 MPU_Process()
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetGravity(&gravity, &q);
         mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-        Serial.print("ypr\t");
-        Serial.print(ypr[0] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.print(ypr[2] * 180 / M_PI);
-        Serial.print("\t");
-        Serial.println(ypr[1] * 180 / M_PI);
+
+        // Serial.print("ypr\t");
+        // Serial.print(ypr[0] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.print(ypr[2] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.println(ypr[1] * 180 / M_PI);
 
         yaw = ypr[0] * 180 / M_PI, pitch = ypr[2] * 180 / M_PI, roll = ypr[1] * 180 / M_PI;
+
+        mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+        Serial.print("x:"), Serial.print(gx), Serial.print("\t");
+        Serial.print("y:"), Serial.print(gy), Serial.print("\t");
+        Serial.print("z:"), Serial.print(gz), Serial.println();
+
 #endif
 
 #ifdef OUTPUT_READABLE_REALACCEL
