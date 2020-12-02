@@ -154,6 +154,9 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = {'$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n'};
 
+/*---------------------------------------------------------------------------------------------------------------*/
+float yaw, pitch, roll;
+
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
 // ================================================================
@@ -260,11 +263,11 @@ void MPU_Init()
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 
-void MPU_Process()
+u8 MPU_Process()
 {
     // if programming failed, don't try to do anything
     if (!dmpReady)
-        return;
+        return -1;
     // read a packet from FIFO
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
     { // Get the Latest packet
@@ -295,15 +298,30 @@ void MPU_Process()
 
 #ifdef OUTPUT_READABLE_YAWPITCHROLL
         // display Euler angles in degrees
+        // mpu.dmpGetQuaternion(&q, fifoBuffer);
+        // mpu.dmpGetGravity(&gravity, &q);
+        // mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        // Serial.print("ypr\t");
+        // Serial.print(ypr[0] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.print(ypr[1] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.println(ypr[2] * 180 / M_PI);
+
+        // yaw = ypr[0] * 180 / M_PI, pitch = ypr[1] * 180 / M_PI, roll = ypr[2] * 180 / M_PI;
+
+        /* revise pitch and roll reversal ---------------------------------------------------------------------------------------------------------------*/
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetGravity(&gravity, &q);
         mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
         Serial.print("ypr\t");
         Serial.print(ypr[0] * 180 / M_PI);
         Serial.print("\t");
-        Serial.print(ypr[1] * 180 / M_PI);
+        Serial.print(ypr[2] * 180 / M_PI);
         Serial.print("\t");
-        Serial.println(ypr[2] * 180 / M_PI);
+        Serial.println(ypr[1] * 180 / M_PI);
+
+        yaw = ypr[0] * 180 / M_PI, pitch = ypr[2] * 180 / M_PI, roll = ypr[1] * 180 / M_PI;
 #endif
 
 #ifdef OUTPUT_READABLE_REALACCEL
@@ -354,6 +372,8 @@ void MPU_Process()
         blinkState = !blinkState;
         digitalWrite(LED_PIN, blinkState);
     }
+
+    return 0;
 }
 
 //mpu.cpp
