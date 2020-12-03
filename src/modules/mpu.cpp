@@ -254,6 +254,8 @@ void MPU_Init()
         Serial.print(F("DMP Initialization failed (code "));
         Serial.print(devStatus);
         Serial.println(F(")"));
+
+        HAL_NVIC_SystemReset();
     }
 
     // configure LED for output

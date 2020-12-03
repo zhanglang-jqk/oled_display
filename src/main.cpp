@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "modules/mpu.h"
 #include "modules/lcd.h"
+#include "modules/key.h"
 
 /* define ---------------------------------------------------------------------------------------------------------------*/
 #define PITCH_THRESHOLD 40
@@ -34,16 +35,38 @@ typedef struct
     float rollThreshold;
     float yawThreshold;
 
-    float accelleroX_Threshold;
-    float accelleroY_Threshold;
-    float accelleroZ_Threshold;
+    int16_t accelleroX_Threshold;
+    int16_t accelleroY_Threshold;
+    int16_t accelleroZ_Threshold;
 
-    float gyroX_Threshold;
-    float gyroY_Threshold;
-    float gyroZ_Threshold;
+    int16_t gyroX_Threshold;
+    int16_t gyroY_Threshold;
+    int16_t gyroZ_Threshold;
 } PAREMETER_STRU;
 PAREMETER_STRU parems;
 
+/*  ---------------------------------------------------------------------------------------------------------------*/
+void refreshMenu()
+{
+    { //refresh lcd
+        char disStr[32] = {0};
+
+        memset(disStr, 0, sizeof(disStr));
+        sprintf(disStr, "acc  :%05d", parems.accelleroX_Threshold);
+        lcd.drawString(2, 0, disStr);
+
+        memset(disStr, 0, sizeof(disStr));
+        sprintf(disStr, "gyro :%05d", parems.gyroX_Threshold);
+        lcd.drawString(2, 1, disStr);
+
+        memset(disStr, 0, sizeof(disStr));
+        char tmp[16] = {0};
+        dtostrf(parems.pitchThreshold, 3, 1, tmp);
+        sprintf(disStr, "angle:%s", tmp);
+        lcd.drawString(2, 2, disStr);
+        lcd.refreshDisplay();
+    }
+}
 /*  ---------------------------------------------------------------------------------------------------------------*/
 
 void setup()
@@ -53,6 +76,8 @@ void setup()
     pinMode(LED2_PIN, OUTPUT);
 
     CLOSE_LED1(), CLOSE_LED2();
+
+    KEY_Init();
 
     MPU_Init();
     LCD_Init();
@@ -99,18 +124,24 @@ void loop()
         char space_str[17] = {0};
         memset(space_str, ' ', sizeof(space_str) - 1);
 
-        char ypr_str[64] = {0};
-        char yaw_str[16] = {0}, pitch_str[16] = {0}, roll_str[16] = {0};
-        memset(yaw_str, 0, sizeof(yaw_str)), memset(pitch_str, 0, sizeof(pitch_str)), memset(roll_str, 0, sizeof(roll_str));
-        dtostrf(yaw, 2, 1, yaw_str), dtostrf(pitch, 2, 1, pitch_str), dtostrf(roll, 2, 1, roll_str);
-        sprintf(ypr_str, "% 5s % 5s % 5s", yaw_str, pitch_str, roll_str);
-        // lcd.clear();
-        lcd.drawString(0, 0, space_str), lcd.drawString(0, 0, ypr_str);
+        char axyz_str[32] = {0};
+        memset(axyz_str, 0, sizeof(axyz_str));
+        sprintf(axyz_str, "%05d %05d %05d", abs(ax), abs(ay), abs(az));
+        lcd.drawString(0, 0, space_str), lcd.drawString(0, 0, axyz_str);
 
-        char gxyz_str[64] = {0};
+        char gxyz_str[32] = {0};
         memset(gxyz_str, 0, sizeof(gxyz_str));
         sprintf(gxyz_str, "%05d %05d %05d", abs(gx), abs(gy), abs(gz));
         lcd.drawString(0, 1, space_str), lcd.drawString(0, 1, gxyz_str);
+
+        char ypr_str[32] = {0};
+        char yaw_str[16] = {0}, pitch_str[16] = {0}, roll_str[16] = {0};
+        memset(yaw_str, 0, sizeof(yaw_str)), memset(pitch_str, 0, sizeof(pitch_str)), memset(roll_str, 0, sizeof(roll_str));
+        dtostrf(yaw, 2, 1, yaw_str), dtostrf(pitch, 2, 1, pitch_str), dtostrf(roll, 2, 1, roll_str);
+        // sprintf(ypr_str, "% 5s % 5s % 5s", yaw_str, pitch_str, roll_str);
+        sprintf(ypr_str, "% 5s % 5s", pitch_str, roll_str);
+        // lcd.clear();
+        lcd.drawString(0, 2, space_str), lcd.drawString(0, 2, ypr_str);
 
         lcd.refreshDisplay(); // only required for SSD1606/7
 
@@ -123,21 +154,200 @@ void loop()
 
         if (gyro_f)
         {
-            if (abs(pitch - set_pitch) > parems.pitchThreshold)
+            if ((abs(pitch - set_pitch) > parems.pitchThreshold) || (abs(roll - set_roll) > parems.rollThreshold))
             {
                 OPEN_LED1();
-            }
-            else if (abs(roll - set_roll) > parems.rollThreshold)
-            {
-                OPEN_LED1();
-            }
-            else
-            {
-                CLOSE_LED1();
+
+                //display set parames
+                char axyz_str[32] = {0};
+                memset(axyz_str, 0, sizeof(axyz_str));
+                sprintf(axyz_str, "%05d %05d %05d", abs(ax), abs(ay), abs(az));
+                lcd.drawString(0, 4, axyz_str);
+
+                char gxyz_str[32] = {0};
+                memset(gxyz_str, 0, sizeof(gxyz_str));
+                sprintf(gxyz_str, "%05d %05d %05d", abs(gx), abs(gy), abs(gz));
+                lcd.drawString(0, 5, gxyz_str);
+
+                char ypr_str[32] = {0};
+                char yaw_str[16] = {0}, pitch_str[16] = {0}, roll_str[16] = {0};
+                memset(yaw_str, 0, sizeof(yaw_str)), memset(pitch_str, 0, sizeof(pitch_str)), memset(roll_str, 0, sizeof(roll_str));
+                dtostrf(yaw, 2, 1, yaw_str), dtostrf(pitch, 2, 1, pitch_str), dtostrf(roll, 2, 1, roll_str);
+                // sprintf(ypr_str, "% 5s % 5s % 5s", yaw_str, pitch_str, roll_str);
+                sprintf(ypr_str, "% 5s % 5s", pitch_str, roll_str);
+                // lcd.clear();
+                lcd.drawString(0, 6, ypr_str);
+
+                lcd.refreshDisplay(); // only required for SSD1606/7
+
                 gyro_f = false;
             }
+            // else
+            // {
+            //     CLOSE_LED1();
+            //     gyro_f = false;
+            // }
         }
     }
+
+    u8 tmp = KEY_ScanBlock(SET_KEY);
+    if (tmp == KEY_SHORT_PRESS)
+    {
+        goto menu;
+    }
+    else if (tmp == KEY_LONG_PRESS)
+    {
+        Serial.println("system reset");
+        for (int i = 0; i < 5; i++)
+        {
+            digitalToggle(LED1_PIN);
+            delay(100);
+        }
+        HAL_NVIC_SystemReset();
+    }
+
+    if (0) //menu control
+    {
+    menu:
+    { //{} menu display init
+        lcd.clear();
+        lcd.drawString(0, 0, "->");
+    }
+
+        u8 item = 1;
+        u32 setKeyCnt = 0, upKeyCnt = 0, downKeyCnt = 0;
+        u8 key = KEY_UP;
+        while (1)
+        {
+            key = KEY_ScanBlock(SET_KEY);
+
+            if (key == KEY_SHORT_PRESS) //{} 'set 	key' short press, select next menu item
+            {
+                item < 3 ? item++ : item = 1;
+
+                lcd.drawString(0, 0, "                ");
+                lcd.drawString(0, 1, "                ");
+                lcd.drawString(0, 2, "                ");
+                //{elif} item icon display
+                if (item == 1)
+                {
+                    lcd.drawString(0, 0, "->");
+                }
+                else if (item == 2)
+                {
+                    lcd.drawString(0, 1, "->");
+                }
+                else if (item == 3)
+                {
+                    lcd.drawString(0, 2, "->");
+                }
+
+                //{} if 'set key' long press , save config paremes data and quick menu setting
+            }
+            else if (key == KEY_LONG_PRESS)
+            {
+                parems.accelleroZ_Threshold = parems.accelleroY_Threshold = parems.accelleroX_Threshold;
+                parems.rollThreshold = parems.yawThreshold = parems.pitchThreshold;
+                parems.gyroZ_Threshold = parems.gyroY_Threshold = parems.gyroX_Threshold;
+
+                // writeBufferFlash(FLASH_START_ADDRESS, (u8 *)&parems, sizeof(PAREMETER_STRU));
+
+                lcd.clear();
+
+                while (digitalRead(SET_KEY) == LOW)
+                    ; //wait key up
+                break;
+            }
+            key = KEY_UP;
+
+            key = KEY_ScanBlock(UP_KEY);
+            if (key == KEY_SHORT_PRESS)
+            {
+                switch (item)
+                {
+                case 1:
+                    parems.accelleroX_Threshold += 1;
+                    break;
+                case 2:
+                    parems.gyroX_Threshold += 100;
+                    break;
+                case 3:
+                    parems.pitchThreshold += 5;
+                    break;
+                }
+            }
+            else if (key == KEY_LONG_PRESS)
+            {
+                while (digitalRead(UP_KEY) == LOW) //wait key up
+                {
+                    switch (item)
+                    {
+                    case 1:
+                        parems.accelleroX_Threshold += 1;
+                        break;
+                    case 2:
+                        parems.gyroX_Threshold += 10;
+                        break;
+                    case 3:
+                        parems.pitchThreshold += 1;
+                        break;
+                    }
+                    // lcd.refreshDisplay();
+                    refreshMenu();
+                    delay(10);
+                }
+            }
+            key = KEY_UP;
+
+            key = KEY_ScanBlock(DOWN_KEY);
+            if (key == KEY_SHORT_PRESS)
+            {
+                switch (item)
+                {
+                case 1:
+                    parems.accelleroX_Threshold -= 1;
+                    break;
+                case 2:
+                    parems.gyroX_Threshold -= 10;
+                    break;
+                case 3:
+                    parems.pitchThreshold -= 5;
+                    break;
+                }
+            }
+            else if (key == KEY_LONG_PRESS)
+            {
+                while (digitalRead(DOWN_KEY) == LOW) //wait key up
+                {
+                    switch (item)
+                    {
+                    case 1:
+                        parems.accelleroX_Threshold -= 1;
+                        break;
+                    case 2:
+                        parems.gyroX_Threshold -= 10;
+                        break;
+                    case 3:
+                        parems.pitchThreshold -= 1;
+                        break;
+                    }
+                    // lcd.refreshDisplay();
+                    refreshMenu();
+                    delay(10);
+                }
+            }
+            key = KEY_UP;
+
+            refreshMenu();
+        }
+    }
+
+    char set_str[32] = {0};
+    sprintf(set_str, "%05d %05d ", parems.accelleroX_Threshold, parems.gyroX_Threshold);
+    char buf[16] = {0};
+    dtostrf(parems.pitchThreshold, 5, 1, (char *)buf);
+    strcat(set_str, buf);
+    lcd.drawString(0, 7, set_str);
 }
 
 /********************************************************************************
