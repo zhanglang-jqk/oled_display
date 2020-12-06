@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <modules/flash.h>
 #include "modules/mpu.h"
 #include "modules/lcd.h"
 #include "modules/key.h"
@@ -43,7 +44,7 @@ typedef struct
     int16_t gyroY_Threshold;
     int16_t gyroZ_Threshold;
 } PAREMETER_STRU;
-PAREMETER_STRU parems;
+PAREMETER_STRU params;
 
 /*  ---------------------------------------------------------------------------------------------------------------*/
 void refreshMenu()
@@ -52,16 +53,16 @@ void refreshMenu()
         char disStr[32] = {0};
 
         memset(disStr, 0, sizeof(disStr));
-        sprintf(disStr, "acc  :%05d", parems.accelleroX_Threshold);
+        sprintf(disStr, "acc  :%05d", params.accelleroX_Threshold);
         lcd.drawString(2, 0, disStr);
 
         memset(disStr, 0, sizeof(disStr));
-        sprintf(disStr, "gyro :%05d", parems.gyroX_Threshold);
+        sprintf(disStr, "gyro :%05d", params.gyroX_Threshold);
         lcd.drawString(2, 1, disStr);
 
         memset(disStr, 0, sizeof(disStr));
         char tmp[16] = {0};
-        dtostrf(parems.pitchThreshold, 3, 1, tmp);
+        dtostrf(params.pitchThreshold, 3, 1, tmp);
         sprintf(disStr, "angle:%s", tmp);
         lcd.drawString(2, 2, disStr);
         lcd.refreshDisplay();
@@ -77,6 +78,7 @@ void setup()
 
     CLOSE_LED1(), CLOSE_LED2();
 
+    FLASH_Init();
     KEY_Init();
 
     MPU_Init();
@@ -84,32 +86,32 @@ void setup()
     // lcd.setFont(u8x8_font_8x13B_1x2_f);
     lcd.setFont(u8x8_font_artossans8_r);
 
-    // u32 tmp = *(u32 *)FLASH_START_ADDRESS;
-    // if (tmp == 0xffffffff) //{} writing default paremeter
-    // {
-    parems.pitchThreshold = PITCH_THRESHOLD;
-    parems.rollThreshold = ROLL_THRESHOLD;
-    parems.yawThreshold = YAW_THRESHOLD;
+    u32 tmp = *(u32 *)FLASH_START_ADDRESS;
+    if (tmp == 0xffffffff) //{} writing default paremeter
+    {
+        params.pitchThreshold = PITCH_THRESHOLD;
+        params.rollThreshold = ROLL_THRESHOLD;
+        params.yawThreshold = YAW_THRESHOLD;
 
-    parems.accelleroX_Threshold = ACCELERO_X_THRESHOLD;
-    parems.accelleroY_Threshold = ACCELERO_Y_THRESHOLD;
-    parems.accelleroZ_Threshold = ACCELERO_Z_THRESHOLD;
+        params.accelleroX_Threshold = ACCELERO_X_THRESHOLD;
+        params.accelleroY_Threshold = ACCELERO_Y_THRESHOLD;
+        params.accelleroZ_Threshold = ACCELERO_Z_THRESHOLD;
 
-    parems.gyroX_Threshold = GYRO_X_THRESHOLD;
-    parems.gyroY_Threshold = GYRO_Y_THRESHOLD;
-    parems.gyroZ_Threshold = GYRO_Z_THRESHOLD;
+        params.gyroX_Threshold = GYRO_X_THRESHOLD;
+        params.gyroY_Threshold = GYRO_Y_THRESHOLD;
+        params.gyroZ_Threshold = GYRO_Z_THRESHOLD;
 
-    //     writeBufferFlash(FLASH_START_ADDRESS, (u8 *)&parems, sizeof(PAREMETER_STRU));
-    // }
-    // else
-    // {
-    //     readBufferFlash(FLASH_START_ADDRESS, (u8 *)&parems, sizeof(PAREMETER_STRU));
-    // }
+        FLASH_WriteBuffer(FLASH_START_ADDRESS, (u8 *)&params, sizeof(PAREMETER_STRU));
+    }
+    else
+    {
+        FLASH_ReadBuffer(FLASH_START_ADDRESS, (u8 *)&params, sizeof(PAREMETER_STRU));
+    }
 }
 bool gyro_f = false;
 
 void loop()
-{
+{ 
     u8 isok = MPU_Process();
 
     // if(0)
@@ -145,16 +147,16 @@ void loop()
 
         lcd.refreshDisplay(); // only required for SSD1606/7
 
-        if ((gx < (0.0 - parems.gyroX_Threshold) || gx > parems.gyroX_Threshold) ||
-            (gy < (0.0 - parems.gyroY_Threshold) || gy > parems.gyroY_Threshold) ||
-            (gz < (0.0 - parems.gyroZ_Threshold) || gz > parems.gyroZ_Threshold))
+        if ((gx < (0.0 - params.gyroX_Threshold) || gx > params.gyroX_Threshold) ||
+            (gy < (0.0 - params.gyroY_Threshold) || gy > params.gyroY_Threshold) ||
+            (gz < (0.0 - params.gyroZ_Threshold) || gz > params.gyroZ_Threshold))
         {
             gyro_f = true;
         }
 
         if (gyro_f)
         {
-            if ((abs(pitch - set_pitch) > parems.pitchThreshold) || (abs(roll - set_roll) > parems.rollThreshold))
+            if ((abs(pitch - set_pitch) > params.pitchThreshold) || (abs(roll - set_roll) > params.rollThreshold))
             {
                 OPEN_LED1();
 
@@ -246,11 +248,11 @@ void loop()
             }
             else if (key == KEY_LONG_PRESS)
             {
-                parems.accelleroZ_Threshold = parems.accelleroY_Threshold = parems.accelleroX_Threshold;
-                parems.rollThreshold = parems.yawThreshold = parems.pitchThreshold;
-                parems.gyroZ_Threshold = parems.gyroY_Threshold = parems.gyroX_Threshold;
+                params.accelleroZ_Threshold = params.accelleroY_Threshold = params.accelleroX_Threshold;
+                params.rollThreshold = params.yawThreshold = params.pitchThreshold;
+                params.gyroZ_Threshold = params.gyroY_Threshold = params.gyroX_Threshold;
 
-                // writeBufferFlash(FLASH_START_ADDRESS, (u8 *)&parems, sizeof(PAREMETER_STRU));
+                FLASH_WriteBuffer(FLASH_START_ADDRESS, (u8 *)&params, sizeof(PAREMETER_STRU));
 
                 lcd.clear();
 
@@ -266,13 +268,13 @@ void loop()
                 switch (item)
                 {
                 case 1:
-                    parems.accelleroX_Threshold += 1;
+                    params.accelleroX_Threshold += 1;
                     break;
                 case 2:
-                    parems.gyroX_Threshold += 100;
+                    params.gyroX_Threshold += 100;
                     break;
                 case 3:
-                    parems.pitchThreshold += 5;
+                    params.pitchThreshold += 5;
                     break;
                 }
             }
@@ -283,13 +285,13 @@ void loop()
                     switch (item)
                     {
                     case 1:
-                        parems.accelleroX_Threshold += 1;
+                        params.accelleroX_Threshold += 1;
                         break;
                     case 2:
-                        parems.gyroX_Threshold += 10;
+                        params.gyroX_Threshold += 10;
                         break;
                     case 3:
-                        parems.pitchThreshold += 1;
+                        params.pitchThreshold += 1;
                         break;
                     }
                     // lcd.refreshDisplay();
@@ -305,13 +307,13 @@ void loop()
                 switch (item)
                 {
                 case 1:
-                    parems.accelleroX_Threshold -= 1;
+                    params.accelleroX_Threshold -= 1;
                     break;
                 case 2:
-                    parems.gyroX_Threshold -= 10;
+                    params.gyroX_Threshold -= 10;
                     break;
                 case 3:
-                    parems.pitchThreshold -= 5;
+                    params.pitchThreshold -= 5;
                     break;
                 }
             }
@@ -322,16 +324,15 @@ void loop()
                     switch (item)
                     {
                     case 1:
-                        parems.accelleroX_Threshold -= 1;
+                        params.accelleroX_Threshold -= 1;
                         break;
                     case 2:
-                        parems.gyroX_Threshold -= 10;
+                        params.gyroX_Threshold -= 10;
                         break;
                     case 3:
-                        parems.pitchThreshold -= 1;
+                        params.pitchThreshold -= 1;
                         break;
                     }
-                    // lcd.refreshDisplay();
                     refreshMenu();
                     delay(10);
                 }
@@ -343,9 +344,9 @@ void loop()
     }
 
     char set_str[32] = {0};
-    sprintf(set_str, "%05d %05d ", parems.accelleroX_Threshold, parems.gyroX_Threshold);
+    sprintf(set_str, "%05d %05d ", params.accelleroX_Threshold, params.gyroX_Threshold);
     char buf[16] = {0};
-    dtostrf(parems.pitchThreshold, 5, 1, (char *)buf);
+    dtostrf(params.pitchThreshold, 5, 1, (char *)buf);
     strcat(set_str, buf);
     lcd.drawString(0, 7, set_str);
 }

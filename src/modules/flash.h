@@ -1,23 +1,22 @@
 /***********************************************************************
- * @file bsp.h
- * BSP
+ * @file flash.h
+ * FLASH
  * @author	:	ch
  * @brief	:	
  * @version:	v1.0
- * @Copyright (C)  2020-11-30  .cdWFVCEL. all right reserved
+ * @Copyright (C)  2020-12-03  .cdWFVCEL. all right reserved
 ***********************************************************************/
 
-#ifndef __BSP_H_
-#define __BSP_H_
+#ifndef __FLASH_H_
+#define __FLASH_H_
 /* 包含头文件 ------------------------------------------------------------------*/
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include "bsp.h"
 /* 宏定义 ----------------------------------------------------------------------*/
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
+#define FLASH_START_ADDRESS (127 * 1024)
 /* 类型定义 --------------------------------------------------------------------*/
 /* 变量声明 --------------------------------------------------------------------*/
 /* 函数声明 --------------------------------------------------------------------*/
-#endif // __BSP_H_
+void FLASH_Init();
+void FLASH_WriteBuffer(u32 addr,u8 * pBuf,u16 len);
+void FLASH_ReadBuffer(u32 addr,u8 * pBuf,u16 len);
+#endif // __FLASH_H_
